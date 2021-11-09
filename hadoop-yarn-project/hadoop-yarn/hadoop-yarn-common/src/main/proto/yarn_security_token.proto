@@ -26,6 +26,37 @@ import "yarn_protos.proto";
 
 // None of the following records are supposed to be exposed to users.
 
+message NMTokenIdentifierProto {
+  optional ApplicationAttemptIdProto appAttemptId = 1;
+  optional NodeIdProto nodeId = 2;
+  optional string appSubmitter = 3;
+  optional int32 keyId = 4 [default = -1];
+}
+
+message AMRMTokenIdentifierProto {
+  optional ApplicationAttemptIdProto appAttemptId = 1;
+  optional int32 keyId = 2 [default = -1];
+}
+
+message ContainerTokenIdentifierProto {
+  optional ContainerIdProto containerId = 1;
+  optional string nmHostAddr = 2;
+  optional string appSubmitter = 3;
+  optional ResourceProto resource = 4;
+  optional int64 expiryTimeStamp =5;
+  optional int32 masterKeyId = 6 [default = -1];
+  optional int64 rmIdentifier = 7;
+  optional PriorityProto priority = 8;
+  optional int64 creationTime = 9;
+  optional LogAggregationContextProto logAggregationContext = 10;
+  optional string nodeLabelExpression = 11;
+  optional ContainerTypeProto containerType = 12;
+  optional ExecutionTypeProto executionType = 13 [default = GUARANTEED];
+  optional int32 version = 14 [default = 0];
+  optional int64 allocation_request_id = 15 [default = -1];
+  repeated string allocation_tags = 16;
+}
+
 message ClientToAMTokenIdentifierProto {
   optional ApplicationAttemptIdProto appAttemptId = 1;
   optional string clientName = 2;

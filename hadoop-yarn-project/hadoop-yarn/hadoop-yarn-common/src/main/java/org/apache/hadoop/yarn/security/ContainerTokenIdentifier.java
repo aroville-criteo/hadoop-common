@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.yarn.security;
 
+import java.io.ByteArrayInputStream;
 import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
 
@@ -27,6 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -37,6 +40,11 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.LogAggregationContext;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
+import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos.ContainerTokenIdentifierProto;
 
 /**
  * TokenIdentifier for a container. Encodes {@link ContainerId},
@@ -50,6 +58,8 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
   private static Log LOG = LogFactory.getLog(ContainerTokenIdentifier.class);
 
   public static final Text KIND = new Text("ContainerToken");
+
+  private final ContainerTokenIdentifierProto.Builder protoBuilder = ContainerTokenIdentifierProto.newBuilder();
 
   private ContainerId containerId;
   private String nmHostAddr;
@@ -157,22 +167,54 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    ApplicationId applicationId =
-        ApplicationId.newInstance(in.readLong(), in.readInt());
-    ApplicationAttemptId applicationAttemptId =
-        ApplicationAttemptId.newInstance(applicationId, in.readInt());
-    this.containerId =
-        ContainerId.newContainerId(applicationAttemptId, in.readLong());
-    this.nmHostAddr = in.readUTF();
-    this.appSubmitter = in.readUTF();
-    int memory = in.readInt();
-    int vCores = in.readInt();
-    this.resource = Resource.newInstance(memory, vCores);
-    this.expiryTimeStamp = in.readLong();
-    this.masterKeyId = in.readInt();
-    this.rmIdentifier = in.readLong();
-    this.priority = Priority.newInstance(in.readInt());
-    this.creationTime = in.readLong();
+    //make a copy of the input stream so that it can be read many times
+    byte[] data = IOUtils.readFullyToByteArray(in);
+    try {
+      //hdp 2 way
+      DataInput di = new DataInputStream(new ByteArrayInputStream(data));
+      ApplicationId applicationId =
+              ApplicationId.newInstance(di.readLong(), di.readInt());
+      ApplicationAttemptId applicationAttemptId =
+              ApplicationAttemptId.newInstance(applicationId, di.readInt());
+      this.containerId =
+              ContainerId.newContainerId(applicationAttemptId, di.readLong());
+      this.nmHostAddr = di.readUTF();
+      this.appSubmitter = di.readUTF();
+      int memory = di.readInt();
+      int vCores = di.readInt();
+      this.resource = Resource.newInstance(memory, vCores);
+      this.expiryTimeStamp = di.readLong();
+      this.masterKeyId = di.readInt();
+      this.rmIdentifier = di.readLong();
+      this.priority = Priority.newInstance(di.readInt());
+      this.creationTime = di.readLong();
+    } catch(IOException e) {
+      //HDF 3 way using proto
+      protoBuilder.mergeFrom(data);
+
+      ContainerIdProto containerIdProto = protoBuilder.getContainerId();
+      ApplicationAttemptIdProto applicationAttemptIdProto = containerIdProto.getAppAttemptId();
+      ApplicationIdProto applicationIdProto = applicationAttemptIdProto.getApplicationId();
+
+      this.containerId = ContainerId.newContainerId(
+              ApplicationAttemptId.newInstance(
+                ApplicationId.newInstance(applicationIdProto.getClusterTimestamp(), applicationIdProto.getId()),
+                applicationAttemptIdProto.getAttemptId()
+              ),
+              containerIdProto.getId()
+      );
+      this.nmHostAddr = protoBuilder.getNmHostAddr();
+      this.appSubmitter = protoBuilder.getAppSubmitter();
+
+      ResourceProto resourceProto = protoBuilder.getResource();
+      this.resource = Resource.newInstance(resourceProto.getMemory(), resourceProto.getVirtualCores());
+      this.expiryTimeStamp = protoBuilder.getExpiryTimeStamp();
+      this.masterKeyId = protoBuilder.getMasterKeyId();
+      this.rmIdentifier = protoBuilder.getRmIdentifier();
+      this.priority = Priority.newInstance(protoBuilder.getPriority().getPriority());
+      this.creationTime = protoBuilder.getCreationTime();
+    }
+
   }
 
   @Override

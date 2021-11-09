@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.yarn.security;
 
+import java.io.ByteArrayInputStream;
 import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
 
@@ -26,12 +28,18 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
+import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos.AMRMTokenIdentifierProto;
 
 /**
  * AMRMTokenIdentifier is the TokenIdentifier to be used by
@@ -42,6 +50,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 public class AMRMTokenIdentifier extends TokenIdentifier {
 
   public static final Text KIND_NAME = new Text("YARN_AM_RM_TOKEN");
+
+  private final AMRMTokenIdentifierProto.Builder protoBuilder = AMRMTokenIdentifierProto.newBuilder();
 
   private ApplicationAttemptId applicationAttemptId;
   private int keyId = Integer.MIN_VALUE;
@@ -77,14 +87,34 @@ public class AMRMTokenIdentifier extends TokenIdentifier {
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    long clusterTimeStamp = in.readLong();
-    int appId = in.readInt();
-    int attemptId = in.readInt();
-    ApplicationId applicationId =
-        ApplicationId.newInstance(clusterTimeStamp, appId);
-    this.applicationAttemptId =
-        ApplicationAttemptId.newInstance(applicationId, attemptId);
-    this.keyId = in.readInt();
+    //make a copy of the input stream so that it can be read many times
+    byte[] data = IOUtils.readFullyToByteArray(in);
+    try {
+      //hdp 2 way
+      DataInput di = new DataInputStream(new ByteArrayInputStream(data));
+      long clusterTimeStamp = di.readLong();
+      int appId = di.readInt();
+      int attemptId = di.readInt();
+      ApplicationId applicationId =
+              ApplicationId.newInstance(clusterTimeStamp, appId);
+      this.applicationAttemptId =
+              ApplicationAttemptId.newInstance(applicationId, attemptId);
+      this.keyId = di.readInt();
+    } catch(IOException e) {
+      //HDF 3 way using proto
+      protoBuilder.mergeFrom(data);
+
+      ApplicationAttemptIdProto applicationAttemptIdProto = protoBuilder.getAppAttemptId();
+      ApplicationIdProto applicationIdProto = applicationAttemptIdProto.getApplicationId();
+
+      this.applicationAttemptId = ApplicationAttemptId.newInstance(
+              ApplicationId.newInstance(applicationIdProto.getClusterTimestamp(), applicationIdProto.getId()),
+              applicationAttemptIdProto.getAttemptId()
+      );
+
+      this.keyId = protoBuilder.getKeyId();
+    }
+
   }
 
   @Override

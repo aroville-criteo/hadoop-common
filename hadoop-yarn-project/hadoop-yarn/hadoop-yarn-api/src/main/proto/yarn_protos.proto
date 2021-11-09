@@ -100,6 +100,16 @@ message ContainerReportProto {
   optional ContainerStateProto container_state = 10;
 }
 
+enum ContainerTypeProto {
+  APPLICATION_MASTER = 1;
+  TASK = 2;
+}
+
+enum ExecutionTypeProto {
+  GUARANTEED = 1;
+  OPPORTUNISTIC = 2;
+}
+
 enum YarnApplicationStateProto {
   NEW = 1;
   NEW_SAVING = 2;
