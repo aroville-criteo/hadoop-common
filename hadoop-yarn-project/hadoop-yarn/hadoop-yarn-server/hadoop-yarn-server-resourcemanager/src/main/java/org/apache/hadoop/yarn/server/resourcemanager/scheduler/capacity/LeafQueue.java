@@ -1538,6 +1538,12 @@ public class LeafQueue extends AbstractCSQueue {
       }
     }
 
+    if (capability.getMemory() == 0 && capability.getVirtualCores() == 0) {
+      LOG.warn(String.format("An application request was made with 0 vcore & 0 memory (user: %s, application id: %s," +
+                      "application attempt id: %s)",
+              application.getUser(), application.getApplicationId(), application.getApplicationAttemptId()));
+    }
+
     // Can we allocate a container on this node?
     int availableContainers = 
         resourceCalculator.computeAvailableContainers(available, capability);

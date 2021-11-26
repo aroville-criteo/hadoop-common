@@ -45,7 +45,6 @@ import org.apache.hadoop.yarn.api.records.Resource;
 @Private
 @Unstable
 public class DominantResourceCalculator extends ResourceCalculator {
-  
   @Override
   public int compare(Resource clusterResource, Resource lhs, Resource rhs,
       boolean singleType) {
@@ -113,8 +112,24 @@ public class DominantResourceCalculator extends ResourceCalculator {
   
   @Override
   public int computeAvailableContainers(Resource available, Resource required) {
+    /*
+     * Sometimes required memory or vcores is equal to 0, leading to DBZ.
+     * If both are 0, we return 0 which will skip scheduling on both code paths.
+     */
+    if (required.getMemory() == 0) {
+      if (required.getVirtualCores() == 0) {
+        return Integer.MAX_VALUE;
+      }
+      else
+        return available.getVirtualCores() / required.getVirtualCores();
+    }
+    else {
+      if (required.getVirtualCores() == 0)
+        return available.getMemory() / required.getMemory();
+    }
+
     return Math.min(
-        available.getMemory() / required.getMemory(), 
+        available.getMemory() / required.getMemory(),
         available.getVirtualCores() / required.getVirtualCores());
   }
 
