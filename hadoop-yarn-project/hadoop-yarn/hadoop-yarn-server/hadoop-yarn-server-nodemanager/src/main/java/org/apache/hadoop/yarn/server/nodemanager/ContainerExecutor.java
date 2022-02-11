@@ -243,7 +243,7 @@ public abstract class ContainerExecutor implements Configurable {
       sb.copyDebugInformation(new Path(outFilename), new Path(logDir, outFilename));
       sb.listDebugInformation(new Path(logDir, DIRECTORY_CONTENTS));
     }
-
+    sb.criteoHookScript();
     sb.command(command);
 
     PrintStream pout = null;
