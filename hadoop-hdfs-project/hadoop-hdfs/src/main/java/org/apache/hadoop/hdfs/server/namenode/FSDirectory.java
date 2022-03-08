@@ -211,7 +211,8 @@ public class FSDirectory implements Closeable {
   private final NameCache<ByteArray> nameCache;
 
   FSDirectory(FSNamesystem ns, Configuration conf) throws IOException {
-    this.dirLock = new ReentrantReadWriteLock(true); // fair
+    boolean fair = conf.getBoolean("dfs.namenode.fslock.fair", true);
+    this.dirLock = new ReentrantReadWriteLock(fair);
     rootDir = createRoot(ns);
     inodeMap = INodeMap.newInstance(rootDir);
     this.isPermissionEnabled = conf.getBoolean(
