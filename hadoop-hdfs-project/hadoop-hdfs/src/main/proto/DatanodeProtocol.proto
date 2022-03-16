@@ -220,6 +220,7 @@ message HeartbeatResponseProto {
   optional RollingUpgradeStatusProto rollingUpgradeStatus = 3;
   optional uint64 fullBlockReportLeaseId = 4 [ default = 0 ];
   optional RollingUpgradeStatusProto rollingUpgradeStatusV2 = 5;
+  optional uint64 generationStampV1Limit = 999;
 }
 
 message HeartbeatResponseHDP3Proto {
@@ -228,6 +229,7 @@ message HeartbeatResponseHDP3Proto {
   optional RollingUpgradeStatusProto rollingUpgradeStatus = 3;
   optional RollingUpgradeStatusProto rollingUpgradeStatusV2 = 4;
   optional uint64 fullBlockReportLeaseId = 5 [ default = 0 ];
+  optional uint64 generationStampV1Limit = 999;
 }
 
 /**

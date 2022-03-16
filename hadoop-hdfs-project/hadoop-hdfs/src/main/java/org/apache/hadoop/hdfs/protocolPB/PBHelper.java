@@ -49,7 +49,6 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
-import org.apache.hadoop.ha.proto.HAServiceProtocolProtos;
 import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.hdfs.inotify.EventBatch;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
@@ -117,7 +116,6 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Rollin
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SafeModeActionProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitShmIdProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitShmSlotProto;
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BalancerBandwidthCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockIdCommandProto;
@@ -194,7 +192,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
-import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
@@ -1749,12 +1746,14 @@ public class PBHelper {
     return RollingUpgradeStatusProto.newBuilder()
         .setBlockPoolId(status.getBlockPoolId())
         .setFinalized(status.isFinalized())
+        .setLastAllocatedBlockId(status.getLastAllocatedBlockId())
         .build();
   }
 
   public static RollingUpgradeStatus convert(RollingUpgradeStatusProto proto) {
     return new RollingUpgradeStatus(proto.getBlockPoolId(),
-        proto.getFinalized());
+        proto.getFinalized(),
+        proto.getLastAllocatedBlockId());
   }
 
   public static RollingUpgradeInfoProto convert(RollingUpgradeInfo info) {
@@ -1770,7 +1769,8 @@ public class PBHelper {
     RollingUpgradeStatusProto status = proto.getStatus();
     return new RollingUpgradeInfo(status.getBlockPoolId(),
         proto.getCreatedRollbackImages(),
-        proto.getStartTime(), proto.getFinalizeTime());
+        proto.getStartTime(), proto.getFinalizeTime(),
+        status.getLastAllocatedBlockId());
   }
 
   public static CorruptFileBlocks convert(CorruptFileBlocksProto c) {

@@ -28,10 +28,13 @@ import org.apache.hadoop.classification.InterfaceStability;
 public class RollingUpgradeStatus {
   private final String blockPoolId;
   private final boolean finalized;
+  private final long lastAllocatedBlockId;
 
-  public RollingUpgradeStatus(String blockPoolId, boolean finalized) {
+  public RollingUpgradeStatus(String blockPoolId, boolean finalized,
+                              long lastAllocatedBlockId) {
     this.blockPoolId = blockPoolId;
     this.finalized = finalized;
+    this.lastAllocatedBlockId = lastAllocatedBlockId;
   }
 
   public String getBlockPoolId() {
@@ -41,6 +44,8 @@ public class RollingUpgradeStatus {
   public boolean isFinalized() {
     return finalized;
   }
+
+  public long getLastAllocatedBlockId() { return lastAllocatedBlockId; }
 
   @Override
   public int hashCode() {

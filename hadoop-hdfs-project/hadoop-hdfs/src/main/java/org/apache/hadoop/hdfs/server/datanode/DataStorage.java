@@ -107,6 +107,8 @@ public class DataStorage extends Storage {
    * directory exists.
    */
   private Set<String> trashEnabledBpids;
+  private Map<String, Long> rollingUpgradeLastAllocatedBlockIdByBpid;
+  private Map<String, Long> generationStampV1LimitByBpid;
 
   /**
    * Datanode UUID that this storage is currently attached to. This
@@ -128,6 +130,8 @@ public class DataStorage extends Storage {
     super(NodeType.DATA_NODE);
     trashEnabledBpids = Collections.newSetFromMap(
         new ConcurrentHashMap<String, Boolean>());
+    rollingUpgradeLastAllocatedBlockIdByBpid = new ConcurrentHashMap<String, Long>();
+    generationStampV1LimitByBpid = new ConcurrentHashMap<String, Long>();
   }
   
   public BlockPoolSliceStorage getBPStorage(String bpid) {
@@ -177,8 +181,10 @@ public class DataStorage extends Storage {
    * enabled by the caller, it is superseded by the 'previous' directory
    * if a layout upgrade is in progress.
    */
-  public void enableTrash(String bpid) {
+  public void enableTrash(String bpid, long rollingUpgradeLastAllocatedBlockId, long generationStampV1Limit) {
     if (trashEnabledBpids.add(bpid)) {
+      rollingUpgradeLastAllocatedBlockIdByBpid.put(bpid, rollingUpgradeLastAllocatedBlockId);
+      generationStampV1LimitByBpid.put(bpid, generationStampV1Limit);
       getBPStorage(bpid).stopTrashCleaner();
       LOG.info("Enabled trash for bpid " + bpid);
     }
@@ -188,6 +194,8 @@ public class DataStorage extends Storage {
     if (trashEnabledBpids.contains(bpid)) {
       getBPStorage(bpid).clearTrash();
       trashEnabledBpids.remove(bpid);
+      rollingUpgradeLastAllocatedBlockIdByBpid.remove(bpid);
+      generationStampV1LimitByBpid.remove(bpid);
       LOG.info("Cleared trash for bpid " + bpid);
     }
   }
@@ -213,11 +221,19 @@ public class DataStorage extends Storage {
    * @return trash directory if rolling upgrade is in progress, null
    *         otherwise.
    */
-  public String getTrashDirectoryForBlockFile(String bpid, File blockFile) {
-    if (trashEnabledBpids.contains(bpid)) {
+  public String getTrashDirectoryForBlockFile(String bpid, File blockFile, ReplicaInfo info) {
+    if (trashEnabledBpids.contains(bpid) && isBlockBeforeRollingUpgrade(bpid, info)) {
       return getBPStorage(bpid).getTrashDirectory(blockFile);
     }
     return null;
+  }
+
+  private boolean isBlockBeforeRollingUpgrade(String bpid, ReplicaInfo info) {
+    return isLegacyBlock(bpid, info) || info.getBlockId() <= rollingUpgradeLastAllocatedBlockIdByBpid.get(bpid);
+  }
+
+  boolean isLegacyBlock(String bpid, ReplicaInfo info) {
+    return info.getGenerationStamp() < generationStampV1LimitByBpid.get(bpid);
   }
 
   /**

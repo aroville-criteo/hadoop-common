@@ -301,7 +301,7 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   }
 
   @Override
-  public void enableTrash(String bpid) {
+  public void enableTrash(String bpid, long rollingUpgradeLastAllocatedBlockId, long generationStampV1Limit) {
 
   }
 

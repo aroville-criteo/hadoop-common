@@ -139,7 +139,7 @@ public class InternalDataNodeTestUtils {
             Mockito.anyBoolean())).thenReturn(
         new HeartbeatResponse(new DatanodeCommand[0], new NNHAStatusHeartbeat(
             HAServiceState.ACTIVE, 1), null, ThreadLocalRandom.current()
-            .nextLong() | 1L));
+            .nextLong() | 1L, 0));
 
     DataNode dn = new DataNode(conf, locations, null) {
       @Override

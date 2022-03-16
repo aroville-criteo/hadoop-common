@@ -576,7 +576,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * moved to a separate trash directory instead of being deleted immediately.
    * This can be useful for example during rolling upgrades.
    */
-  public void enableTrash(String bpid);
+  public void enableTrash(String bpid, long rollingUpgradeLastAllocatedBlockId, long generationStampV1Limit);
 
   /**
    * Clear trash

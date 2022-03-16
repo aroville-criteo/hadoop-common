@@ -174,7 +174,7 @@ public class TestBPOfferService {
       heartbeatCounts[nnIdx]++;
       HeartbeatResponse heartbeatResponse = new HeartbeatResponse(
           datanodeCommands[nnIdx], mockHaStatuses[nnIdx], null,
-          ThreadLocalRandom.current().nextLong() | 1L);
+          ThreadLocalRandom.current().nextLong() | 1L, 0);
       //reset the command
       datanodeCommands[nnIdx] = new DatanodeCommand[0];
       return heartbeatResponse;

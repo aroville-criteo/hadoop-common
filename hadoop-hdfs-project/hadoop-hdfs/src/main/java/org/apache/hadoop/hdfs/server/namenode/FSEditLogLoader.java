@@ -74,6 +74,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenewDelegationTokenOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetAclOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RollingUpgradeOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RollingUpgradeStartOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetGenstampV1Op;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetGenstampV2Op;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetNSQuotaOp;
@@ -751,8 +752,9 @@ public class FSEditLogLoader {
         }
       }
       // start rolling upgrade
-      final long startTime = ((RollingUpgradeOp) op).getTime();
-      fsNamesys.startRollingUpgradeInternal(startTime);
+      final long startTime = ((RollingUpgradeStartOp) op).getTime();
+      final long lastAllocatedBlockId = ((RollingUpgradeStartOp) op).getLastAllocatedBlockId();
+      fsNamesys.startRollingUpgradeInternal(startTime, lastAllocatedBlockId);
       fsNamesys.triggerRollbackCheckpoint();
       break;
     }

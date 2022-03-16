@@ -115,7 +115,7 @@ public class TestDataNodeRollingUpgrade {
 
   private File getTrashFileForBlock(File blockFile, boolean exists) {
     File trashFile = new File(
-        dn0.getStorage().getTrashDirectoryForBlockFile(blockPoolId, blockFile));
+        dn0.getStorage().getTrashDirectoryForBlockFile(blockPoolId, blockFile, null));
     assertEquals(exists, trashFile.exists());
     return trashFile;
   }

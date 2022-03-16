@@ -1152,9 +1152,10 @@ public class FSEditLog implements LogsPurgeable {
     logEdit(op);
   }
 
-  void logStartRollingUpgrade(long startTime) {
+  void logStartRollingUpgrade(long startTime, long lastAllocatedBlockId) {
     RollingUpgradeStartOp op = RollingUpgradeStartOp.getInstance(cache.get());
     op.setTime(startTime);
+    op.setLastAllocatedBlockId(lastAllocatedBlockId);
     logEdit(op);
   }
 

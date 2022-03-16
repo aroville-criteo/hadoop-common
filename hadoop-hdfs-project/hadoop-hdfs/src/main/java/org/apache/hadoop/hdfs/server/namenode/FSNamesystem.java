@@ -96,7 +96,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SUPPORT_APPEND_KEY;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.SECURITY_XATTR_UNREADABLE_BY_SUPERUSER;
 import static org.apache.hadoop.util.Time.monotonicNow;
 import static org.apache.hadoop.util.Time.now;
-import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
@@ -273,8 +272,6 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
-import org.apache.hadoop.hdfs.StorageType;
-import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RetriableException;
@@ -5304,7 +5301,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           getFSImage().getCorrectLastAppliedOrWrittenTxId());
 
       return new HeartbeatResponse(cmds, haState, rollingUpgradeInfo,
-          blockReportLeaseId);
+          blockReportLeaseId, getGenerationStampV1Limit());
     } finally {
       readUnlock();
     }
@@ -8749,13 +8746,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       long startTime = now();
       if (!haEnabled) { // for non-HA, we require NN to be in safemode
-        startRollingUpgradeInternalForNonHA(startTime);
+        startRollingUpgradeInternalForNonHA(startTime, getLastAllocatedBlockId());
       } else { // for HA, NN cannot be in safemode
         checkNameNodeSafeMode("Failed to start rolling upgrade");
-        startRollingUpgradeInternal(startTime);
+        startRollingUpgradeInternal(startTime, getLastAllocatedBlockId());
       }
 
-      getEditLog().logStartRollingUpgrade(rollingUpgradeInfo.getStartTime());
+      getEditLog().logStartRollingUpgrade(rollingUpgradeInfo.getStartTime(),
+              rollingUpgradeInfo.getLastAllocatedBlockId());
       if (haEnabled) {
         // roll the edit log to make sure the standby NameNode can tail
         getFSImage().rollEditLog();
@@ -8775,11 +8773,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Update internal state to indicate that a rolling upgrade is in progress.
    * @param startTime rolling upgrade start time
    */
-  void startRollingUpgradeInternal(long startTime)
+  void startRollingUpgradeInternal(long startTime, long lastAllocatedBlockId)
       throws IOException {
     checkRollingUpgrade("start rolling upgrade");
     getFSImage().checkUpgrade();
-    setRollingUpgradeInfo(false, startTime);
+    setRollingUpgradeInfo(false, startTime, lastAllocatedBlockId);
   }
 
   /**
@@ -8787,7 +8785,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * non-HA setup. This requires the namesystem is in SafeMode and after doing a
    * checkpoint for rollback the namesystem will quit the safemode automatically 
    */
-  private void startRollingUpgradeInternalForNonHA(long startTime)
+  private void startRollingUpgradeInternalForNonHA(long startTime, long lastAllocatedBlockId)
       throws IOException {
     Preconditions.checkState(!haEnabled);
     if (!isInSafeMode()) {
@@ -8802,12 +8800,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     // leave SafeMode automatically
     setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
-    setRollingUpgradeInfo(true, startTime);
+    setRollingUpgradeInfo(true, startTime, lastAllocatedBlockId);
   }
 
-  void setRollingUpgradeInfo(boolean createdRollbackImages, long startTime) {
+  void setRollingUpgradeInfo(boolean createdRollbackImages, long startTime, long lastAllocatedBlockId) {
     rollingUpgradeInfo = new RollingUpgradeInfo(blockPoolId,
-        createdRollbackImages, startTime, 0L);
+        createdRollbackImages, startTime, 0L, lastAllocatedBlockId);
   }
 
   public void setCreatedRollbackImages(boolean created) {

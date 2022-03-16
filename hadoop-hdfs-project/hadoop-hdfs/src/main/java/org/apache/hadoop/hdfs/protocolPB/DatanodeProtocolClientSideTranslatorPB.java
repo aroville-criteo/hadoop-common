@@ -180,7 +180,7 @@ public class DatanodeProtocolClientSideTranslatorPB implements
       rollingUpdateStatus = PBHelper.convert(resp.getRollingUpgradeStatus());
     }
     return new HeartbeatResponse(cmds, PBHelper.convert(resp.getHaStatus()),
-        rollingUpdateStatus, resp.getFullBlockReportLeaseId());
+        rollingUpdateStatus, resp.getFullBlockReportLeaseId(), resp.getGenerationStampV1Limit());
   }
 
   static class HeartbeatResponseProtoWrapper {
@@ -259,6 +259,14 @@ public class DatanodeProtocolClientSideTranslatorPB implements
         return maybeHdp3.getFullBlockReportLeaseId();
       } else {
         return original.getFullBlockReportLeaseId();
+      }
+    }
+
+    public long getGenerationStampV1Limit() {
+      if(maybeHdp3 != null) {
+        return maybeHdp3.getGenerationStampV1Limit();
+      } else {
+        return original.getGenerationStampV1Limit();
       }
     }
   }

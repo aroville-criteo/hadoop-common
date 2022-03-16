@@ -1947,8 +1947,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     for (int i = 0; i < invalidBlks.length; i++) {
       final File f;
       final FsVolumeImpl v;
+      final ReplicaInfo info;
       synchronized (this) {
-        final ReplicaInfo info = volumeMap.get(bpid, invalidBlks[i]);
+        info = volumeMap.get(bpid, invalidBlks[i]);
         if (info == null) {
           // It is okay if the block is not found -- it may be deleted earlier.
           LOG.info("Failed to delete replica " + invalidBlks[i]
@@ -2016,7 +2017,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         asyncDiskService.deleteAsync(v.obtainReference(), f,
             FsDatasetUtil.getMetaFile(f, invalidBlks[i].getGenerationStamp()),
             new ExtendedBlock(bpid, invalidBlks[i]),
-            dataStorage.getTrashDirectoryForBlockFile(bpid, f));
+            dataStorage.getTrashDirectoryForBlockFile(bpid, f, info));
       } catch (ClosedChannelException e) {
         LOG.warn("Volume " + v + " is closed, ignore the deletion task for " +
             "block " + invalidBlks[i]);
@@ -2761,8 +2762,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   @Override
-  public void enableTrash(String bpid) {
-    dataStorage.enableTrash(bpid);
+  public void enableTrash(String bpid, long rollingUpgradeLastAllocatedBlockId, long generationStampV1Limit) {
+    dataStorage.enableTrash(bpid, rollingUpgradeLastAllocatedBlockId, generationStampV1Limit);
   }
 
   @Override
