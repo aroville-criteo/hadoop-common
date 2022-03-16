@@ -94,7 +94,7 @@ public class ReplicaCachingGetSpaceUsed extends FSCachingGetSpaceUsed {
         }
       }
 
-      this.used.set(dfsUsed);
+      setUsed(dfsUsed);
       cost = Time.monotonicNow() - start;
       if (cost > REPLICA_CACHING_GET_SPACE_USED_THRESHOLD_MS) {
         LOG.debug(
