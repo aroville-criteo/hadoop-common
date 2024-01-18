@@ -146,6 +146,7 @@ import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.UTCClock;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.CharMatcher;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.SettableFuture;
 
@@ -544,6 +545,8 @@ public class ClientRMService extends AbstractService implements
       throw RPCUtil.getRemoteException(ie);
     }
 
+    checkTags(submissionContext.getApplicationTags())
+
     // Check whether app has already been put into rmContext,
     // If it is, simply return the response
     if (rmContext.getRMApps().get(applicationId) != null) {
@@ -590,6 +593,31 @@ public class ClientRMService extends AbstractService implements
     SubmitApplicationResponse response = recordFactory
         .newRecordInstance(SubmitApplicationResponse.class);
     return response;
+  }
+
+  private void checkTags(Set<String> tags) throws YarnException {
+    int appMaxTags = getConfig().getInt(
+            YarnConfiguration.RM_APPLICATION_MAX_TAGS,
+            YarnConfiguration.DEFAULT_RM_APPLICATION_MAX_TAGS);
+    int appMaxTagLength = getConfig().getInt(
+            YarnConfiguration.RM_APPLICATION_MAX_TAG_LENGTH,
+            YarnConfiguration.DEFAULT_RM_APPLICATION_MAX_TAG_LENGTH);
+    if (tags.size() > appMaxTags) {
+      throw RPCUtil.getRemoteException(new IllegalArgumentException(
+              "Too many applicationTags, a maximum of only " + appMaxTags
+                      + " are allowed!"));
+    }
+    for (String tag : tags) {
+      if (tag.length() > appMaxTagLength) {
+        throw RPCUtil.getRemoteException(
+                new IllegalArgumentException("Tag " + tag + " is too long, "
+                        + "maximum allowed length of a tag is " + appMaxTagLength));
+      }
+      if (!CharMatcher.ASCII.matchesAllOf(tag)) {
+        throw RPCUtil.getRemoteException(new IllegalArgumentException(
+                "A tag can only have ASCII " + "characters! Invalid tag - " + tag));
+      }
+    }
   }
 
   @SuppressWarnings("unchecked")
